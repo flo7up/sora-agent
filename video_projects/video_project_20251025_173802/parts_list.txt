@@ -1,0 +1,3 @@
+file 'C:\Users\ffollonier\workspace\workshops and demos\Azure AI Foundry API Demo\Azure-AI-Foundry-Demo\video_project_20251025_173802\part2-20251025-174611-f6a7b1.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\Azure AI Foundry API Demo\Azure-AI-Foundry-Demo\video_project_20251025_173802\part3-20251025-175129-67cd7f.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\Azure AI Foundry API Demo\Azure-AI-Foundry-Demo\video_project_20251025_173802\sora_video-20251025-174048-813e2a.mp4'

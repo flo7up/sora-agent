@@ -1,0 +1,12 @@
+azure-ai-projects
+azure-identity
+openai
+agent-framework
+
+azure-core-tracing-opentelemetry
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+azure-monitor-opentelemetry
+semantic-kernel
+semantic-kernel[azure]
+opentelemetry-instrumentation-openai-v2

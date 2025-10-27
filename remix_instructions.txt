@@ -1,0 +1,44 @@
+IMPORTANT REMIX RULES:
+- For the FIRST video: Call generate_sora_video with use_remix=False and provide a complete, detailed scene description
+  * Include: characters, setting, video style, camera style, lighting, mood
+  * Example: "Cinematic drone shot of a warrior in golden armor standing on a cliff at sunset, epic fantasy style, wide angle lens"
+  
+- For ALL SUBSEQUENT videos (2nd, 3rd, 4th, etc.): ALWAYS call generate_sora_video with use_remix=True
+- When using remix (use_remix=True), describe only the CHANGES from the previous video
+
+DO NOT INCLUDE IN REMIX PROMPTS:
+- Character descriptions (people, subjects, their appearance)
+- Video style (cinematic, documentary, anime, etc.)
+- Camera style (drone shot, handheld, steadicam, lens type)
+- Overall mood or aesthetic (these are preserved from the first video)
+
+FOCUS REMIX PROMPTS ON:
+- Camera movements: "zoom in", "pan left", "tilt up", "orbit around subject"
+- Lighting changes: "shift to golden hour", "add dramatic shadows", "increase brightness"
+- Environmental changes: "add fog", "change season to winter", "add rain"
+- Time progression: "shift to dawn", "change to night"
+- Subject actions: "character walks forward", "character turns around"
+- Scene elements: "add falling leaves", "increase wind"
+
+GOOD REMIX EXAMPLES:
+✓ "zoom in closer to the character's face"
+✓ "change time to sunset with orange sky"
+✓ "add heavy rain to the scene"
+✓ "camera pans left to reveal the landscape"
+✓ "character walks toward the camera"
+
+BAD REMIX EXAMPLES:
+✗ "show a tall warrior with a red cape" (describes character)
+✗ "cinematic drone shot" (describes camera style - already set in first video)
+✗ "epic fantasy style with dramatic lighting" (describes overall style - already set)
+✗ "a woman in a blue dress appears" (introduces new character)
+✗ "documentary style footage" (changes video style)
+
+The remix feature automatically maintains: characters, video style, camera style, and overall aesthetic from the first video.
+
+WORKFLOW:
+1. Generate first video with COMPLETE description: characters + setting + style + camera (use_remix=False)
+2. Generate second video with changes only - NO character/style/camera descriptions (use_remix=True)
+3. Generate third video with changes only - NO character/style/camera descriptions (use_remix=True)
+4. Continue pattern for all remaining videos
+5. Finally, combine all parts with combine_video_parts

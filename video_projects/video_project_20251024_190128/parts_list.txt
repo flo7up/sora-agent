@@ -1,0 +1,2 @@
+file 'C:\Users\ffollonier\workspace\workshops and demos\Azure AI Foundry API Demo\Azure-AI-Foundry-Demo\video_project_20251024_190128\spinning_wizard_full_story-20251024-190839-bd27f2.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\Azure AI Foundry API Demo\Azure-AI-Foundry-Demo\video_project_20251024_190128\whimsical_spinning_wizard-20251024-190529-08bec7.mp4'
