@@ -48,10 +48,10 @@ def _load_text_file(
 def load_script_ideas(filepath: Path = None, base_dir: Path = None) -> str:
     """Load video script ideas from a text file."""
     return _load_text_file(
-        "video_script_ideas.txt",
+        "video_idea.txt",
         filepath,
         filter_comments=True,
-        not_found_message="Warning: video_script_ideas.txt not found. Create this file to add custom script ideas.",
+        not_found_message="Warning: video_idea.txt not found. Create this file to add custom script ideas.",
         base_dir=base_dir
     )
 
@@ -59,9 +59,9 @@ def load_script_ideas(filepath: Path = None, base_dir: Path = None) -> str:
 def load_base_instructions(filepath: Path = None, base_dir: Path = None) -> str:
     """Load base instructions from a text file."""
     return _load_text_file(
-        "base_instructions.txt",
+        "instructions_base.txt",
         filepath,
-        not_found_message="Warning: base_instructions.txt not found. Create this file to add custom base instructions.",
+        not_found_message="Warning: instructions_base.txt not found. Create this file to add custom base instructions.",
         base_dir=base_dir
     )
 
@@ -69,8 +69,8 @@ def load_base_instructions(filepath: Path = None, base_dir: Path = None) -> str:
 def load_remix_instructions(filepath: Path = None, base_dir: Path = None) -> str:
     """Load remix instructions from a text file."""
     return _load_text_file(
-        "remix_instructions.txt",
+        "instructions_remix.txt",
         filepath,
-        not_found_message="Warning: remix_instructions.txt not found. Using default remix behavior.",
+        not_found_message="Warning: instructions_remix.txt not found. Using default remix behavior.",
         base_dir=base_dir
     )

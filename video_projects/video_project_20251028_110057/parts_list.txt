@@ -1,0 +1,4 @@
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251028_110057\part1-20251028-110619-3c3a90.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251028_110057\part2-20251028-110902-d494ea.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251028_110057\part3-20251028-111145-80e605.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251028_110057\sora_video-20251028-110329-9cbe28.mp4'

@@ -42,6 +42,7 @@ async def main():
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(
             deployment_name="gpt-5",
+            store=True,
             api_version="2024-12-15-preview",
             credential=AzureCliCredential(),
             instructions=instructions,

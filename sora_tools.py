@@ -19,24 +19,19 @@ _last_video_id: str = None
 # Sora configuration
 SORA_ENDPOINT = "https://ai-ffollonier-0931.openai.azure.com/"
 SORA_DEPLOYMENT = "sora-2"
-SORA_API_VERSION = "2024-12-01-preview"  # Updated API version for Sora
 SORA_DEFAULT_POLL_INTERVAL = 5
 SORA_MAX_POLLS = 60
 
 _credential = DefaultAzureCredential()
 
-# Initialize OpenAI client with token provider for Azure
+# Initialize OpenAI client with token provider
 token_provider = get_bearer_token_provider(
     _credential, "https://cognitiveservices.azure.com/.default"
 )
 
-# Use OpenAI client with Azure endpoint (not AzureOpenAI)
 client = OpenAI(
     base_url=f"{SORA_ENDPOINT}openai/v1/",
     api_key=token_provider,
-    default_headers={
-        "api-version": SORA_API_VERSION
-    }
 )
 
 
@@ -64,7 +59,7 @@ def set_project_folder(folder: Path):
 )
 def generate_sora_video(
     prompt: Annotated[str, Field(description="For first video: full scene description. For subsequent videos: describe only the changes from the previous video.")],
-    seconds: Annotated[int, Field(description="Desired video length in seconds (4, 8, or 12).")] = 12,
+    seconds: Annotated[int, Field(description="Desired video length in seconds (1-60).", ge=1, le=60)] = 12,
     use_remix: Annotated[bool, Field(description="Set to True to remix the previous video with changes. False for first video.")] = False,
     poll_interval_seconds: Annotated[
         int, Field(description="Seconds between status checks.", ge=1, le=30)
@@ -88,10 +83,6 @@ def generate_sora_video(
     if not prompt:
         return "Video generation aborted: the prompt cannot be empty."
     
-    # Validate seconds parameter
-    if seconds not in [4, 8, 12]:
-        return f"Error: 'seconds' must be 4, 8, or 12. Got: {seconds}"
-    
     # Check if remix is requested but no previous video exists
     if use_remix and not _last_video_id:
         return "Cannot use remix: no previous video ID available. Generate the first video without remix."
@@ -99,7 +90,7 @@ def generate_sora_video(
     try:
         # Step 1: Submit video generation request
         create_params = {
-            "model": "sora-2",
+            "model": SORA_DEPLOYMENT,
             "prompt": prompt,
             "seconds": str(seconds),
         }
@@ -109,7 +100,6 @@ def generate_sora_video(
             create_params["remix_video_id"] = _last_video_id
             print(f"Using remix with video ID: {_last_video_id}")
         
-        # Use the videos.create endpoint
         video = client.videos.create(**create_params)
         
         job_id = video.id
@@ -119,7 +109,7 @@ def generate_sora_video(
     except Exception as exc:
         return f"Video generation request failed: {exc}"
 
-    # Step 2: Poll for completion
+    # Step 2: Poll for completion using OpenAI client
     polls = 0
     
     while polls < SORA_MAX_POLLS:
@@ -128,17 +118,15 @@ def generate_sora_video(
         
         try:
             # Retrieve updated video status
-            video = client.videos.retrieve(job_id)
+            video = client.videos.retrieve(video.id)
             
-            # Check status
-            status = getattr(video, 'status', None)
-            
-            if status in {"succeeded", "completed"}:
+            # Stop if progress is 100% or status indicates completion
+            if video.progress == 100 or video.status in {"succeeded", "completed"}:
                 break
             
-            if status in {"failed", "error", "cancelled"}:
-                error_msg = f"Job failed. Status: {status}"
-                if hasattr(video, 'error') and video.error:
+            if video.status in {"failed", "error"}:
+                error_msg = f"Job failed. Status: {video.status}"
+                if video.error:
                     error_msg += f". Error: {video.error}"
                 return error_msg
                 
@@ -150,34 +138,23 @@ def generate_sora_video(
     timestamp_suffix = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
     try:
-        # Download video content
+        # Download video content using the client
         unique_suffix = f"{timestamp_suffix}-{uuid.uuid4().hex[:6]}"
         remix_prefix = "remix_" if use_remix else ""
         filename = f"{remix_prefix}{sanitized_hint}-{unique_suffix}.mp4"
         output_path = _current_project_folder / filename
         
-        # Get video URL and download
-        if hasattr(video, 'output') and video.output:
-            video_url = video.output[0] if isinstance(video.output, list) else video.output
-            
-            # Download the video file
-            import requests
-            response = requests.get(video_url, headers={"Authorization": f"Bearer {token_provider()}"})
-            response.raise_for_status()
-            
-            with open(output_path, 'wb') as f:
-                f.write(response.content)
-        else:
-            return f"Video generation completed but no output URL available for job {job_id}"
+        content = client.videos.download_content(video.id, variant="video")
+        content.write_to_file(str(output_path))
         
         # Store the video ID for future remix operations
-        _last_video_id = job_id
+        _last_video_id = video.id
         
-        remix_note = f" (remixed from previous video)" if use_remix else " (base video for remix)"
+        remix_note = f" (remixed from {_last_video_id})" if use_remix else " (base video for remix)"
         
         return (
             f"Video generation succeeded for job {job_id}{remix_note}.\n"
-            f"Video ID: {job_id}\n"
+            f"Video ID: {video.id}\n"
             f"Saved: {output_path}\n"
             f"This video ID can be used for remixing subsequent videos."
         )
