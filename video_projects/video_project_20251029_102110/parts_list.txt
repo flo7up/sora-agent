@@ -1,0 +1,3 @@
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251029_102110\sora_video-20251029-102414-40c52c.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251029_102110\sora_video-20251029-102706-b103be.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251029_102110\sora_video-20251029-103012-fed7da.mp4'

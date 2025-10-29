@@ -1,0 +1,3 @@
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251029_094555\rain_cats-20251029-095404-97b701.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251029_094555\sora_video-20251029-094838-025725.mp4'
+file 'C:\Users\ffollonier\workspace\workshops and demos\sora-agent\video_projects\video_project_20251029_094555\wizard_dance-20251029-095123-ece472.mp4'
