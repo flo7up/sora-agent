@@ -187,6 +187,7 @@ def generate_sora_video(
         if _last_reference_frame and _last_reference_frame.exists():
             reference_file = open(_last_reference_frame, "rb")
             create_params["input_reference"] = reference_file
+            print(f"Using reference image for video generation: {_last_reference_frame}")
         
         # Submit the video creation request
         video = client.videos.create(**create_params)
@@ -240,8 +241,8 @@ def generate_sora_video(
         
         # Extract and save the last frame as a reference for the next video
         last_frame_path = _extract_last_frame(output_path)
-        _last_reference_frame = last_frame_path
-        
+        if last_frame_path:
+            _last_reference_frame = last_frame_path
         message = (
             f"Video generation succeeded for job {job_id}.\n"
             f"Video ID: {video.id}\n"
@@ -250,8 +251,7 @@ def generate_sora_video(
         if last_frame_path:
             message += f"\nLast frame saved: {last_frame_path}"
         else:
-            message += "\nLast frame unavailable; next video will not use a reference image."
-        
+            message += "\nLast frame unavailable; continuing with prior reference if available."
         return message
         
     except Exception as exc:
