@@ -3,7 +3,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
@@ -13,6 +13,7 @@ from agent_framework import ai_function
 
 # Global variable to store the current project folder for this agent run
 _current_project_folder: Path = None
+_last_reference_frame: Optional[Path] = None
 # Global variable to store the last generated video ID for remix feature
 _last_video_id: str = None
 
@@ -21,6 +22,7 @@ SORA_ENDPOINT = "https://ai-ffollonier-0931.openai.azure.com/"
 SORA_DEPLOYMENT = "sora-2"
 SORA_DEFAULT_POLL_INTERVAL = 5
 SORA_MAX_POLLS = 60
+SORA_DEFAULT_SIZE = "1280x720"
 
 _credential = DefaultAzureCredential()
 
@@ -40,27 +42,111 @@ def _sanitize_filename_fragment(fragment: str) -> str:
     return cleaned or "sora_video"
 
 
+def _get_video_frame_count(video_path: Path) -> Optional[int]:
+    probe_variants = [
+        (
+            "-count_frames",
+            "-show_entries",
+            "stream=nb_read_frames",
+        ),
+        (
+            "-show_entries",
+            "stream=nb_frames",
+        ),
+    ]
+    for variant in probe_variants:
+        cmd = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            *variant,
+            "-of",
+            "default=nokey=1:noprint_wrappers=1",
+            str(video_path),
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        except FileNotFoundError:
+            print("ffprobe not found. Unable to compute frame count.")
+            return None
+        except subprocess.CalledProcessError:
+            continue
+        value = result.stdout.strip()
+        if value.isdigit():
+            return int(value)
+    return None
+
+
+def _extract_last_frame(video_path: Path) -> Optional[Path]:
+    output_path = video_path.with_name(f"{video_path.stem}_last_frame.png")
+    frame_count = _get_video_frame_count(video_path)
+    if frame_count and frame_count > 0:
+        frame_index = frame_count - 1
+        cmd = [
+            "ffmpeg",
+            "-i",
+            str(video_path),
+            "-vf",
+            f"select=eq(n\\,{frame_index})",
+            "-vframes",
+            "1",
+            "-vsync",
+            "vfr",
+            "-y",
+            str(output_path),
+        ]
+    else:
+        cmd = [
+            "ffmpeg",
+            "-sseof",
+            "-1",
+            "-i",
+            str(video_path),
+            "-vframes",
+            "1",
+            "-vsync",
+            "vfr",
+            "-y",
+            str(output_path),
+        ]
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except FileNotFoundError:
+        print("ffmpeg not found. Unable to extract last frame.")
+        return None
+    except subprocess.CalledProcessError as exc:
+        print(f"Failed to extract last frame from {video_path}: {exc.stderr or exc.stdout}")
+        return None
+    if output_path.exists():
+        return output_path
+    if frame_count:
+        print(f"Last frame extraction produced no output for {video_path} (frame index {frame_count - 1}).")
+    else:
+        print(f"Last frame extraction fallback produced no output for {video_path}.")
+    return None
+
+
 def set_project_folder(folder: Path):
     """Set the current project folder for video generation."""
-    global _current_project_folder
+    global _current_project_folder, _last_reference_frame
     _current_project_folder = folder
+    _last_reference_frame = None
 
 
 @ai_function(
     name="generate_sora_video",
     description=(
-        "Creates a video with Azure OpenAI Sora. For the FIRST video in a series, provide a complete, "
-        "vivid prompt describing the full scene. The function returns a video ID that should be used "
-        "for subsequent videos. For SUBSEQUENT videos (2nd, 3rd, etc.), describe only the CHANGES "
-        "you want to make from the previous video (e.g., 'change camera angle to overhead', "
-        "'add rain to the scene', 'shift time to sunset'). This ensures consistency across videos. "
-        "Set use_remix=True for subsequent videos to maintain visual consistency."
+        "Creates a video with Azure OpenAI Sora. Provide a full prompt for the first video, then only describe changes. "
+        "The tool automatically sends the last frame from the previous video as input_reference to maintain continuity. "
+        "The use_remix flag is deprecated and ignored."
     ),
 )
 def generate_sora_video(
     prompt: Annotated[str, Field(description="For first video: full scene description. For subsequent videos: describe only the changes from the previous video.")],
     seconds: Annotated[int, Field(description="Desired video length in seconds (1-60).", ge=1, le=60)] = 12,
-    use_remix: Annotated[bool, Field(description="Set to True to remix the previous video with changes. False for first video.")] = False,
+    use_remix: Annotated[bool, Field(description="Deprecated. Kept for backward compatibility.")] = False,
     poll_interval_seconds: Annotated[
         int, Field(description="Seconds between status checks.", ge=1, le=30)
     ] = SORA_DEFAULT_POLL_INTERVAL,
@@ -69,12 +155,11 @@ def generate_sora_video(
     ] = "sora_video",
 ) -> str:
     """Generate one Sora video and save it to the project folder.
-    
-    Note: The 'seconds' parameter only accepts values of 4, 8, or 12. Other values will be rejected by the API.
-    For remix: The first video establishes the base. Subsequent videos should use use_remix=True and 
-    describe only changes to maintain consistency.
+
+    The last frame of each completed video is saved as a PNG and automatically reused as the
+    reference image for the next call.
     """
-    global _current_project_folder, _last_video_id
+    global _current_project_folder, _last_reference_frame
     
     if _current_project_folder is None:
         return "Error: Project folder not initialized. Agent setup failed."
@@ -83,23 +168,27 @@ def generate_sora_video(
     if not prompt:
         return "Video generation aborted: the prompt cannot be empty."
     
-    # Check if remix is requested but no previous video exists
-    if use_remix and not _last_video_id:
-        return "Cannot use remix: no previous video ID available. Generate the first video without remix."
+    if use_remix:
+        print("Note: use_remix is deprecated; reference images are applied automatically.")
 
+    # Prepare video creation parameters
+    create_params = {
+        "model": SORA_DEPLOYMENT,
+        "prompt": prompt,
+        "seconds": str(seconds),
+        "size": SORA_DEFAULT_SIZE,
+    }
+    
+    video = None
+    job_id = None
+    reference_file = None
     try:
-        # Step 1: Submit video generation request
-        create_params = {
-            "model": SORA_DEPLOYMENT,
-            "prompt": prompt,
-            "seconds": str(seconds),
-        }
+        # Attach the last reference frame if available
+        if _last_reference_frame and _last_reference_frame.exists():
+            reference_file = open(_last_reference_frame, "rb")
+            create_params["input_reference"] = reference_file
         
-        # Add remix_video_id if using remix feature
-        if use_remix and _last_video_id:
-            create_params["remix_video_id"] = _last_video_id
-            print(f"Using remix with video ID: {_last_video_id}")
-        
+        # Submit the video creation request
         video = client.videos.create(**create_params)
         
         job_id = video.id
@@ -108,6 +197,9 @@ def generate_sora_video(
             
     except Exception as exc:
         return f"Video generation request failed: {exc}"
+    finally:
+        if reference_file:
+            reference_file.close()
 
     # Step 2: Poll for completion using OpenAI client
     polls = 0
@@ -140,24 +232,27 @@ def generate_sora_video(
     try:
         # Download video content using the client
         unique_suffix = f"{timestamp_suffix}-{uuid.uuid4().hex[:6]}"
-        remix_prefix = "remix_" if use_remix else ""
-        filename = f"{remix_prefix}{sanitized_hint}-{unique_suffix}.mp4"
+        filename = f"{sanitized_hint}-{unique_suffix}.mp4"
         output_path = _current_project_folder / filename
         
         content = client.videos.download_content(video.id, variant="video")
         content.write_to_file(str(output_path))
         
-        # Store the video ID for future remix operations
-        _last_video_id = video.id
+        # Extract and save the last frame as a reference for the next video
+        last_frame_path = _extract_last_frame(output_path)
+        _last_reference_frame = last_frame_path
         
-        remix_note = f" (remixed from {_last_video_id})" if use_remix else " (base video for remix)"
-        
-        return (
-            f"Video generation succeeded for job {job_id}{remix_note}.\n"
+        message = (
+            f"Video generation succeeded for job {job_id}.\n"
             f"Video ID: {video.id}\n"
-            f"Saved: {output_path}\n"
-            f"This video ID can be used for remixing subsequent videos."
+            f"Saved: {output_path}"
         )
+        if last_frame_path:
+            message += f"\nLast frame saved: {last_frame_path}"
+        else:
+            message += "\nLast frame unavailable; next video will not use a reference image."
+        
+        return message
         
     except Exception as exc:
         return f"Failed to download and save video {job_id}: {exc}"
