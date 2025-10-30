@@ -3,3 +3,5 @@
 /.venv
 AgentFramework/.env_ff
 *.mp4
+/video_projects
+/Archive

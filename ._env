@@ -1,0 +1,26 @@
+# Azure Project
+PROJECT_ENDPOINT="https://<your-resource-name>.services.ai.azure.com/api/projects/<your-project-name>"
+AZURE_AI_PROJECT_ENDPOINT="https://<your-resource-name>.services.ai.azure.com/api/projects/<your-project-name>"
+
+
+AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+OPENAI_RESPONSES_MODEL_ID="gpt-4.1-mini"
+OPENAI_CHAT_MODEL_ID="gpt-4.1-mini"
+AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME="gpt-4.1-mini"
+
+# Azure OpenAI (avoid committing real keys)
+AZURE_OPENAI_API_KEY="<your-azure-openai-api-key>"
+OPENAI_API_KEY="<your-openai-api-key>"
+AZURE_OPENAI_API_VERSION="2024-10-01-preview"
+
+# Bing Search
+BING_SUBSCRIPTION_KEY="<your-bing-subscription-key>"
+bing_connection_name="<your-bing-connection-name>"
+
+AZURE_OPENAI_CHAT_DEPLOYMENT_NAME="gpt-4.1-mini"
+AZURE_OPENAI_ENDPOINT="https://<your-resource-name>.openai.azure.com/"
+
+# Remove to avoid double Azure Monitor config. The framework call will fetch the correct one.
+APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=<your-instrumentation-key>;IngestionEndpoint=https://<your-region>.in.applicationinsights.azure.com/;LiveEndpoint=https://<your-region>.livediagnostics.monitor.azure.com/;ApplicationId=<your-application-id>"
+ENABLE_OTEL=True
+ENABLE_SENSITIVE_DATA=true
