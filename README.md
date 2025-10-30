@@ -1,6 +1,64 @@
 # Sora Agent
 
-Generate short-form videos using Azure OpenAI Sora and the Agent Framework for Azure AI. The agent orchestrates prompt creation, remix flows, and combines generated clips into a final deliverable.
+## Overview
+- Generate short-form videos using Azure OpenAI Sora and the Agent Framework for Azure AI. The agent orchestrates prompt creation, remix flows, and combines generated clips into a final deliverable.
+- Automates multi-part video creation with Azure OpenAI Sora and stitches the outputs into a final cut.
+- Uses an Azure-hosted GPT agent to orchestrate scene prompts, monitor job status, and manage downloads.
+- Extracts the last frame of each rendered clip and feeds it as the reference image for the next video to keep visual continuity.
+
+## Key Components
+- `sora_agent.py` bootstraps the run, creates a timestamped project workspace, and launches the Azure AI Agent with available tools.
+- `sora_tools.py` provides functions to:
+  - generate videos (`generate_sora_video`) with automatic reference-frame reuse,
+  - combine the produced clips (`combine_video_parts`),
+  - maintain per-run context (project directory, latest frame asset).
+- `file_loaders.py` loads optional instruction overlays from local text files.
+
+## Prerequisites
+- Python 3.10+
+- Azure CLI login with sufficient access to your Azure OpenAI resource.
+- Environment variables:
+  - `AZURE_OPENAI_ENDPOINT` / credentials handled through `DefaultAzureCredential`.
+  - Optional `SORA_OUTPUT_DIR` to override the default output location.
+- `ffmpeg` and `ffprobe` available on the system `PATH` for frame extraction and concatenation.
+
+## Setup
+1. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Log in with Azure CLI:
+
+   ```bash
+   az login
+   ```
+
+3. (Optional) Create `video_idea.txt`, `instructions_base.txt`, and `instructions_remix.txt` to seed agent prompts.
+
+## Workflow
+1. Agent creates a timestamped project directory under `video_projects/`.
+2. First clip: provide a full prompt (characters, style, camera). The rendered video’s last frame is saved beside the clip.
+3. Subsequent clips: pass only incremental changes; the saved PNG is uploaded as `input_reference` for continuity.
+4. Repeat until all scenes are generated.
+5. Call `combine_video_parts` to concatenate every `.mp4` into `final_video.mp4`.
+
+## Running the Agent
+```bash
+python sora_agent.py
+```
+- The agent prints progress, job IDs, saved video paths, and extracted reference frames.
+- Final status includes the combined video output path.
+
+## Customization Tips
+- Adjust `SORA_DEFAULT_SIZE` or `seconds` in `sora_tools.py` to match project requirements.
+- Modify instruction files to steer the GPT agent’s storytelling style.
+- Manually supply prompts via `generate_sora_video` if integrating with other orchestration logic.
+
+## Troubleshooting
+- Missing reference PNGs usually indicate `ffmpeg`/`ffprobe` configuration issues—confirm both binaries are accessible.
+- Azure authentication errors: ensure `az account show` reflects the intended subscription and resource access.
+- Video concatenation failures: inspect `parts_list.txt` and re-run `combine_video_parts` after verifying each clip.
 
 ## Features
 - Async agent workflow driven by `AzureAIAgentClient`

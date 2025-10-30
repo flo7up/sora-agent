@@ -1,10 +1,1 @@
-# Video Script Ideas
-# Add your video script ideas below. These will be loaded and used by the agent.
-# Each idea can be on a new line or in paragraphs.
-
-Example: Create a cinematic journey through a bioluminescent underwater city
-Example: A time-lapse of seasons changing in a magical forest
-Example: Documentary-style footage of robots building a space station
-
-# Add your custom ideas here:
-A story about an elefant that learns to fly 
+Create a cinematic journey through a bioluminescent underwater city
